@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResearchHub - AI Research Assistant</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1565c0;
+            --secondary: #5e35b1;
+            --bg-light: #ffffff;
+            --bg-light-alt: #f5f7fa;
+            --text-light: #202124;
+            --text-light-secondary: #5f6368;
+            --border-light: #dadce0;
+            --accent: #34a853;
+
+            --bg-dark: #1a1a1a;
+            --bg-dark-alt: #2d2d2d;
+            --text-dark: #e8eaed;
+            --text-dark-secondary: #9aa0a6;
+            --border-dark: #3c4043;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-light);
+            transition: background 0.3s, color 0.3s;
+        }
+
+        body.dark-mode {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .auth-view {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-view.active {
+            display: flex;
+        }
+
+        .auth-container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .auth-container h2 {
+            font-size: 24px;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #202124;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .auth-form input {
+            padding: 12px;
+            border: 1px solid #dadce0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .auth-form input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .auth-form button {
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+
+        .auth-form button:hover {
+            transform: translateY(-2px);
+        }
+
+        .auth-toggle {
+            text-align: center;
+            font-size: 13px;
+            margin-top: 15px;
+            color: #5f6368;
+        }
+
+        .auth-toggle button {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            padding: 0;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--bg-light-alt);
+            border-right: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        body.dark-mode .sidebar {
+            background: var(--bg-dark-alt);
+            border-right-color: var(--border-dark);
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        body.dark-mode .sidebar-header {
+            border-bottom-color: var(--border-dark);
+        }
+
+        .sidebar-header h1 {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .sidebar-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: none;
+            background: var(--bg-light);
+            color: var(--text-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            font-size: 16px;
+        }
+
+        body.dark-mode .icon-btn {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        .icon-btn:hover {
+            background: var(--border-light);
+        }
+
+        body.dark-mode .icon-btn:hover {
+            background: var(--border-dark);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-light-secondary);
+            padding: 0 10px;
+            margin-top: 10px;
+        }
+
+        body.dark-mode .section-title {
+            color: var(--text-dark-secondary);
+        }
+
+        .conversation-item {
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+            background: transparent;
+            color: var(--text-light-secondary);
+            border: none;
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        body.dark-mode .conversation-item {
+            color: var(--text-dark-secondary);
+        }
+
+        .conversation-item:hover {
+            background: var(--border-light);
+        }
+
+        body.dark-mode .conversation-item:hover {
+            background: var(--border-dark);
+        }
+
+        .bookmark-item {
+            padding: 12px;
+            border-radius: 6px;
+            background: var(--bg-light);
+            border: 1px solid var(--border-light);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        body.dark-mode .bookmark-item {
+            background: var(--bg-dark);
+            border-color: var(--border-dark);
+        }
+
+        .bookmark-item:hover {
+            border-color: var(--primary);
+            background: rgba(26, 115, 232, 0.05);
+        }
+
+        body.dark-mode .bookmark-item:hover {
+            background: rgba(26, 115, 232, 0.1);
+        }
+
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-light);
+            transition: background 0.3s;
+        }
+
+        body.dark-mode .main-area {
+            background: var(--bg-dark);
+        }
+
+        .header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: border-color 0.3s;
+        }
+
+        body.dark-mode .header {
+            border-bottom-color: var(--border-dark);
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        body.dark-mode .header-title {
+            color: var(--text-dark);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            font-size: 13px;
+            background: var(--bg-light);
+            color: var(--text-light);
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        body.dark-mode .select {
+            background: var(--bg-dark-alt);
+            color: var(--text-dark);
+            border-color: var(--border-dark);
+        }
+
+        .select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: var(--bg-light-alt);
+            transition: background 0.3s;
+        }
+
+        body.dark-mode .chat-area {
+            background: var(--bg-dark);
+        }
+
+        .message {
+            display: flex;
+            animation: slideIn 0.3s ease-out;
+            gap: 12px;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-wrapper {
+            max-width: 70%;
+            position: relative;
+        }
+
+        .message.user .message-wrapper {
+            max-width: 65%;
+        }
+
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 8px;
+            line-height: 1.6;
+            word-wrap: break-word;
+            background: var(--bg-light);
+            color: var(--text-light);
+            border: 1px solid var(--border-light);
+            transition: all 0.2s;
+        }
+
+        body.dark-mode .message-content {
+            background: var(--bg-dark-alt);
+            color: var(--text-dark);
+            border-color: var(--border-dark);
+        }
+
+        .user .message-content {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .message-content h1,
+        .message-content h2,
+        .message-content h3 {
+            margin: 12px 0 8px 0;
+            color: var(--primary);
+        }
+
+        .user .message-content h1,
+        .user .message-content h2,
+        .user .message-content h3 {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .message-content ul,
+        .message-content ol {
+            margin: 8px 0 8px 20px;
+        }
+
+        .message-content code {
+            background: rgba(0,0,0,0.05);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        body.dark-mode .message-content code {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 16px;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            opacity: 0.5;
+        }
+
+        .empty-text {
+            text-align: center;
+            color: var(--text-light-secondary);
+            font-size: 14px;
+        }
+
+        body.dark-mode .empty-text {
+            color: var(--text-dark-secondary);
+        }
+
+        .input-area {
+            padding: 20px 24px;
+            background: var(--bg-light);
+            border-top: 1px solid var(--border-light);
+            transition: all 0.3s;
+        }
+
+        body.dark-mode .input-area {
+            background: var(--bg-dark);
+            border-top-color: var(--border-dark);
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            background: var(--bg-light);
+            color: var(--text-light);
+            transition: all 0.2s;
+        }
+
+        body.dark-mode input[type="text"] {
+            background: var(--bg-dark-alt);
+            color: var(--text-dark);
+            border-color: var(--border-dark);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+        }
+
+        .btn {
+            padding: 10px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--border-light);
+            color: var(--text-light);
+        }
+
+        body.dark-mode .btn-secondary {
+            background: var(--border-dark);
+            color: var(--text-dark);
+        }
+
+        .btn-secondary:hover {
+            background: var(--text-light-secondary);
+        }
+
+        body.dark-mode .btn-secondary:hover {
+            background: var(--text-dark-secondary);
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .loading span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: bounce 1.4s infinite;
+        }
+
+        .loading span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                opacity: 0.3;
+                transform: translateY(0);
+            }
+            40% {
+                opacity: 1;
+                transform: translateY(-6px);
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-light);
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        body.dark-mode .modal-content {
+            background: var(--bg-dark-alt);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 16px;
+            font-size: 16px;
+        }
+
+        .modal-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .modal-form input {
+            padding: 10px;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        body.dark-mode .modal-form input {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+            border-color: var(--border-dark);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 1024px) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 150px;
+                flex-direction: row;
+                border-right: none;
+                border-bottom: 1px solid var(--border-light);
+            }
+
+            .sidebar-content {
+                flex-direction: row;
+                gap: 0;
+            }
+
+            .message.user .message-wrapper {
+                max-width: 85%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .chat-area {
+                padding: 16px;
+            }
+
+            .message .message-wrapper {
+                max-width: 90%;
+            }
+
+            .auth-container {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-view" id="authView">
+        <div class="auth-container">
+            <h2 id="authTitle">Login</h2>
+            <form class="auth-form" id="authForm" onsubmit="handleAuth(event)">
+                <input type="text" id="authUsername" placeholder="Username" required>
+                <input type="email" id="authEmail" placeholder="Email" style="display: none;">
+                <input type="password" id="authPassword" placeholder="Password" required>
+                <button type="submit" id="authSubmit">Login</button>
+            </form>
+            <div class="auth-toggle">
+                <span id="authToggleText">Don't have an account?</span>
+                <button onclick="toggleAuthMode()">Sign up</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container" id="appContainer" style="display: none;">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>💬 ResearchHub</h1>
+                <div class="sidebar-actions">
+                    <button class="icon-btn" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+                    <button class="icon-btn" onclick="openProfileModal()" title="Profile">👤</button>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <div>
+                    <div class="section-title">Recent Conversations</div>
+                    <input type="text" id="searchInput" placeholder="🔍 Search..." style="padding: 8px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 12px; margin-bottom: 10px; background: var(--bg-light); color: var(--text-light);">
+                    <div id="conversationsList" style="display: flex; flex-direction: column; gap: 6px;"></div>
+                </div>
+
+                <div>
+                    <div class="section-title">Bookmarked Prompts</div>
+                    <div id="bookmarksList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-area">
+            <div class="header">
+                <div class="header-title">Research Assistant</div>
+                <div class="controls">
+                    <select class="select" id="modeSelect" onchange="savePreference('mode', this.value)">
+                        <option value="general">General Research</option>
+                        <option value="literature">Literature Review</option>
+                        <option value="methodology">Research Methodology</option>
+                        <option value="data_analysis">Data Analysis</option>
+                        <option value="writing">Academic Writing</option>
+                    </select>
+                    <select class="select" id="modelSelect" onchange="savePreference('model', this.value)">
+                        <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Recommended)</option>
+                        <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fast)</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="newChat()">➕ New Chat</button>
+                    <button class="btn btn-secondary" onclick="openBookmarkModal()">⭐ Bookmark</button>
+                    <button class="btn btn-secondary" onclick="shareConversation()" id="shareBtn" style="display: none;">🔗 Share</button>
+                    <button class="btn btn-secondary" onclick="exportConversation()">📥 Export</button>
+                </div>
+            </div>
+
+            <div class="chat-area" id="chatArea">
+                <div class="empty-state">
+                    <div class="empty-icon">🔬</div>
+                    <div class="empty-text">
+                        <strong>Welcome to ResearchHub</strong><br>
+                        Select a research mode and start exploring
+                    </div>
+                </div>
+            </div>
+            
+            <div id="analyticsBar" style="padding: 12px 24px; background: var(--bg-light-alt); border-top: 1px solid var(--border-light); font-size: 12px; color: var(--text-light-secondary); display: none;">
+                ⏱️ <span id="responseTime">-</span>ms | 📊 <span id="tokensUsed">-</span> tokens | 📈 <span id="analyticsLink" style="cursor: pointer; text-decoration: underline;">View stats</span>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="messageInput" placeholder="Ask your research question..." autocomplete="off">
+                    <button class="btn" id="sendBtn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="bookmarkModal">
+        <div class="modal-content">
+            <h3>Save Prompt</h3>
+            <form class="modal-form" onsubmit="saveBookmark(event)">
+                <input type="text" id="bookmarkTitle" placeholder="Bookmark title" required>
+                <input type="text" id="bookmarkPrompt" placeholder="Enter your prompt" required>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeBookmarkModal()">Cancel</button>
+                    <button type="submit" class="btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="profileModal">
+        <div class="modal-content">
+            <h3>Profile Settings</h3>
+            <form class="modal-form" onsubmit="updateProfile(event)">
+                <label>Username</label>
+                <input type="text" id="profileUsername" placeholder="Username">
+                <label>Email</label>
+                <input type="email" id="profileEmail" placeholder="Email">
+                <label>New Password (leave blank to keep current)</label>
+                <input type="password" id="profilePassword" placeholder="New password">
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeProfileModal()">Cancel</button>
+                    <button type="submit" class="btn">Save Changes</button>
+                </div>
+            </form>
+            <button class="btn" style="width: 100%; margin-top: 12px; background: #d32f2f;" onclick="logoutUser()">🚪 Logout</button>
+        </div>
+    </div>
+
+    <div class="modal" id="renameModal">
+        <div class="modal-content">
+            <h3>Rename Conversation</h3>
+            <form class="modal-form" onsubmit="saveRename(event)">
+                <input type="text" id="renameInput" placeholder="New title" required>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeRenameModal()">Cancel</button>
+                    <button type="submit" class="btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <h3>Rate Response</h3>
+            <form class="modal-form" onsubmit="submitFeedback(event)">
+                <label>Rating</label>
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <button type="button" class="btn btn-secondary" onclick="setRating(1)" style="flex: 1; background: #ddd;">😞 1</button>
+                    <button type="button" class="btn btn-secondary" onclick="setRating(2)" style="flex: 1; background: #ddd;">😕 2</button>
+                    <button type="button" class="btn btn-secondary" onclick="setRating(3)" style="flex: 1; background: #ddd;">😐 3</button>
+                    <button type="button" class="btn btn-secondary" onclick="setRating(4)" style="flex: 1; background: #ddd;">🙂 4</button>
+                    <button type="button" class="btn btn-secondary" onclick="setRating(5)" style="flex: 1; background: #ddd;">😍 5</button>
+                </div>
+                <textarea id="feedbackText" placeholder="Optional feedback..." style="padding: 10px; border: 1px solid var(--border-light); border-radius: 6px; font-family: inherit; resize: vertical; min-height: 60px;"></textarea>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeFeedbackModal()">Cancel</button>
+                    <button type="submit" class="btn">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="analyticsModal">
+        <div class="modal-content">
+            <h3>📊 Usage Analytics</h3>
+            <div id="analyticsContent" style="font-size: 14px; line-height: 1.8; color: var(--text-light);">
+                <p>Total Requests: <strong id="totalRequests">-</strong></p>
+                <p>Total Tokens Used: <strong id="totalTokens">-</strong></p>
+                <p>Average Response Time: <strong id="avgResponseTime">-</strong>ms</p>
+                <p>Models Used:</p>
+                <div id="modelsUsed" style="margin-left: 10px; font-size: 13px;"></div>
+            </div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button type="button" class="btn" onclick="closeAnalyticsModal()" style="width: 100%;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isLoading = false;
+        let currentConversationId = null;
+        let currentUser = null;
+        let isSignup = false;
+        const messageInput = document.getElementById('messageInput');
+
+        function getConversationItemHtml(conv) {
+            return `
+                <div style="display: flex; align-items: center; gap: 4px; width: 100%;">
+                    <button class="conversation-item" style="flex: 1;" onclick="loadConversation('${conv.id}')" title="${conv.title}">${conv.title}</button>
+                    <button class="icon-btn" style="width: 20px; height: 20px; font-size: 11px; padding: 0;" onclick="openRenameModal('${conv.id}')" title="Rename">✏️</button>
+                    <button class="icon-btn" style="width: 20px; height: 20px; font-size: 11px; padding: 0;" onclick="deleteConversation('${conv.id}')" title="Delete">🗑️</button>
+                </div>
+            `;
+        }
+
+        let currentRenameConvId = null;
+        let currentFeedbackRating = 0;
+
+        async function checkAuth() {
+            const res = await fetch('/api/auth/check');
+            const data = await res.json();
+            
+            if (data.authenticated) {
+                currentUser = data.user;
+                document.getElementById('authView').classList.remove('active');
+                document.getElementById('appContainer').style.display = 'flex';
+                loadPreferences();
+                loadConversations();
+                loadBookmarks();
+            } else {
+                document.getElementById('authView').classList.add('active');
+                document.getElementById('appContainer').style.display = 'none';
+            }
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            const username = document.getElementById('authUsername').value;
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+
+            const endpoint = isSignup ? '/api/auth/register' : '/api/auth/login';
+            const body = isSignup ? { username, email, password } : { username, password };
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (res.ok) {
+                    await checkAuth();
+                } else {
+                    alert('Authentication failed');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        function toggleAuthMode() {
+            isSignup = !isSignup;
+            document.getElementById('authTitle').textContent = isSignup ? 'Sign Up' : 'Login';
+            document.getElementById('authEmail').style.display = isSignup ? 'block' : 'none';
+            document.getElementById('authSubmit').textContent = isSignup ? 'Sign Up' : 'Login';
+            document.getElementById('authToggleText').textContent = isSignup ? 'Already have an account?' : "Don't have an account?";
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            await checkAuth();
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            savePreference('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        }
+
+        function loadPreferences() {
+            if (currentUser.preferences) {
+                if (currentUser.preferences.theme === 'dark') {
+                    document.body.classList.add('dark-mode');
+                }
+                if (currentUser.preferences.mode) {
+                    document.getElementById('modeSelect').value = currentUser.preferences.mode;
+                }
+                if (currentUser.preferences.model) {
+                    document.getElementById('modelSelect').value = currentUser.preferences.model;
+                }
+            }
+        }
+
+        async function savePreference(key, value) {
+            currentUser.preferences[key] = value;
+            await fetch('/api/preferences', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ preferences: currentUser.preferences })
+            });
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isLoading) return;
+
+            if (document.getElementById('chatArea').querySelector('.empty-state')) {
+                document.getElementById('chatArea').innerHTML = '';
+            }
+
+            addMessage(message, 'user');
+            messageInput.value = '';
+            messageInput.disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+            isLoading = true;
+
+            try {
+                addLoadingMessage();
+
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message,
+                        mode: document.getElementById('modeSelect').value,
+                        model: document.getElementById('modelSelect').value,
+                        conversation_id: currentConversationId
+                    })
+                });
+
+                if (!res.ok) throw new Error('Failed to get response');
+                const data = await res.json();
+
+                currentConversationId = data.conversation_id;
+                document.getElementById('chatArea').lastChild.remove();
+                addMessage(data.response, 'assistant');
+                document.getElementById('shareBtn').style.display = 'block';
+                
+                // Show analytics
+                document.getElementById('analyticsBar').style.display = 'block';
+                document.getElementById('responseTime').textContent = data.response_time_ms;
+                document.getElementById('tokensUsed').textContent = data.tokens_used;
+                
+                // Add feedback button after assistant message
+                const feedbackBtn = document.createElement('button');
+                feedbackBtn.className = 'btn btn-secondary';
+                feedbackBtn.style.marginTop = '8px';
+                feedbackBtn.textContent = '⭐ Rate this response';
+                feedbackBtn.onclick = openFeedbackModal;
+                document.getElementById('chatArea').lastChild.querySelector('.message-wrapper').appendChild(feedbackBtn);
+                
+                loadConversations();
+            } catch (err) {
+                document.getElementById('chatArea').lastChild.remove();
+                addMessage('Error: ' + err.message, 'error');
+            } finally {
+                messageInput.disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                isLoading = false;
+                messageInput.focus();
+            }
+        }
+
+        function addMessage(text, role) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+
+            if (role === 'assistant') {
+                content.innerHTML = marked.parse(text);
+            } else {
+                content.textContent = text;
+            }
+
+            wrapper.appendChild(content);
+            msgDiv.appendChild(wrapper);
+            document.getElementById('chatArea').appendChild(msgDiv);
+            document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight;
+        }
+
+        function addLoadingMessage() {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message assistant';
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper';
+            const content = document.createElement('div');
+            content.className = 'message-content loading';
+            content.innerHTML = '<span></span><span></span><span></span>';
+            wrapper.appendChild(content);
+            msgDiv.appendChild(wrapper);
+            document.getElementById('chatArea').appendChild(msgDiv);
+        }
+
+        async function loadConversations() {
+            const res = await fetch('/api/conversations');
+            const data = await res.json();
+            const list = document.getElementById('conversationsList');
+            list.innerHTML = data.conversations.slice(0, 5).map(c => getConversationItemHtml(c)).join('');
+        }
+
+        async function deleteConversation(id) {
+            if (!confirm('Delete this conversation?')) return;
+            await fetch(`/api/conversations/${id}`, { method: 'DELETE' });
+            loadConversations();
+            if (currentConversationId === id) newChat();
+        }
+
+        async function shareConversation() {
+            if (!currentConversationId) {
+                alert('No conversation to share');
+                return;
+            }
+            try {
+                const res = await fetch(`/api/conversations/${currentConversationId}/share`, { method: 'POST' });
+                const data = await res.json();
+                const shareUrl = `${window.location.origin}?share=${data.share_id}`;
+                alert('Share link: ' + shareUrl);
+                navigator.clipboard.writeText(shareUrl);
+            } catch (e) {
+                alert('Share failed');
+            }
+        }
+
+        function newChat() {
+            currentConversationId = null;
+            document.getElementById('chatArea').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">🔬</div>
+                    <div class="empty-text">
+                        <strong>New Chat</strong><br>
+                        Start a new research conversation
+                    </div>
+                </div>
+            `;
+            document.getElementById('shareBtn').style.display = 'none';
+        }
+
+        async function loadConversation(id) {
+            const res = await fetch(`/api/conversations/${id}`);
+            const data = await res.json();
+            currentConversationId = id;
+            document.getElementById('chatArea').innerHTML = '';
+            data.history.forEach(msg => addMessage(msg.content, msg.role));
+            document.getElementById('shareBtn').style.display = 'block';
+        }
+
+        async function loadBookmarks() {
+            const res = await fetch('/api/bookmarks');
+            const data = await res.json();
+            const list = document.getElementById('bookmarksList');
+            list.innerHTML = data.bookmarks.slice(0, 5).map(b =>
+                `<div class="bookmark-item" onclick="useBookmark('${b.prompt}')" title="${b.prompt}">⭐ ${b.title}</div>`
+            ).join('');
+        }
+
+        function useBookmark(prompt) {
+            document.getElementById('messageInput').value = prompt;
+            messageInput.focus();
+        }
+
+        function openBookmarkModal() {
+            document.getElementById('bookmarkModal').classList.add('active');
+        }
+
+        function closeBookmarkModal() {
+            document.getElementById('bookmarkModal').classList.remove('active');
+        }
+
+        async function saveBookmark(e) {
+            e.preventDefault();
+            const title = document.getElementById('bookmarkTitle').value;
+            const prompt = document.getElementById('bookmarkPrompt').value;
+
+            await fetch('/api/bookmarks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    prompt,
+                    mode: document.getElementById('modeSelect').value
+                })
+            });
+
+            closeBookmarkModal();
+            loadBookmarks();
+            document.getElementById('bookmarkTitle').value = '';
+            document.getElementById('bookmarkPrompt').value = '';
+        }
+
+        function openProfileModal() {
+            document.getElementById('profileUsername').value = currentUser.username;
+            document.getElementById('profileEmail').value = currentUser.email;
+            document.getElementById('profilePassword').value = '';
+            document.getElementById('profileModal').classList.add('active');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profileModal').classList.remove('active');
+        }
+
+        async function updateProfile(e) {
+            e.preventDefault();
+            const username = document.getElementById('profileUsername').value.trim();
+            const email = document.getElementById('profileEmail').value.trim();
+            const password = document.getElementById('profilePassword').value;
+
+            try {
+                const res = await fetch('/api/user/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    currentUser = data.user;
+                    alert('Profile updated successfully');
+                    closeProfileModal();
+                } else {
+                    const err = await res.json();
+                    alert('Error: ' + err.error);
+                }
+            } catch (e) {
+                alert('Update failed: ' + e.message);
+            }
+        }
+
+        async function logoutUser() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            await checkAuth();
+        }
+
+        async function exportConversation() {
+            if (!currentConversationId) {
+                alert('No conversation to export');
+                return;
+            }
+            window.location.href = `/api/export?id=${currentConversationId}`;
+        }
+
+        messageInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter' && !isLoading) sendMessage();
+        });
+
+        document.getElementById('searchInput').addEventListener('input', async (e) => {
+            const query = e.target.value;
+            const res = await fetch(`/api/conversations?search=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            const list = document.getElementById('conversationsList');
+            if (data.conversations.length === 0) {
+                list.innerHTML = '<div style="color: var(--text-light-secondary); font-size: 12px;">No conversations found</div>';
+            } else {
+                list.innerHTML = data.conversations.map(c => getConversationItemHtml(c)).join('');
+            }
+        });
+
+        function openRenameModal(convId) {
+            currentRenameConvId = convId;
+            document.getElementById('renameInput').value = '';
+            document.getElementById('renameModal').classList.add('active');
+        }
+
+        function closeRenameModal() {
+            document.getElementById('renameModal').classList.remove('active');
+        }
+
+        async function saveRename(e) {
+            e.preventDefault();
+            const newTitle = document.getElementById('renameInput').value.trim();
+            if (!newTitle) return;
+            await fetch(`/api/conversations/${currentRenameConvId}/rename`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: newTitle })
+            });
+            closeRenameModal();
+            loadConversations();
+            if (currentConversationId === currentRenameConvId) {
+                const res = await fetch(`/api/conversations/${currentConversationId}`);
+                const data = await res.json();
+            }
+        }
+
+        function openFeedbackModal() {
+            document.getElementById('feedbackModal').classList.add('active');
+            currentFeedbackRating = 0;
+        }
+
+        function closeFeedbackModal() {
+            document.getElementById('feedbackModal').classList.remove('active');
+        }
+
+        function setRating(rating) {
+            currentFeedbackRating = rating;
+            document.querySelectorAll('#feedbackModal .btn-secondary').forEach((btn, idx) => {
+                btn.style.background = idx + 1 === rating ? '#667eea' : '#ddd';
+                btn.style.color = idx + 1 === rating ? 'white' : 'inherit';
+            });
+        }
+
+        async function submitFeedback(e) {
+            e.preventDefault();
+            if (currentFeedbackRating === 0) { alert('Please select a rating'); return; }
+            const feedbackText = document.getElementById('feedbackText').value;
+            await fetch(`/api/conversations/${currentConversationId}/feedback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    rating: currentFeedbackRating,
+                    feedback: feedbackText,
+                    message_index: 0
+                })
+            });
+            closeFeedbackModal();
+            alert('Thank you for your feedback!');
+        }
+
+        async function loadAnalytics() {
+            const res = await fetch('/api/analytics');
+            const data = await res.json();
+            document.getElementById('totalRequests').textContent = data.total_requests;
+            document.getElementById('totalTokens').textContent = data.total_tokens;
+            document.getElementById('avgResponseTime').textContent = data.avg_response_time_ms;
+            document.getElementById('modelsUsed').innerHTML = data.models_used.map(m => 
+                `<div>${m.model}: ${m.count} requests</div>`
+            ).join('');
+            document.getElementById('analyticsModal').classList.add('active');
+        }
+
+        function closeAnalyticsModal() {
+            document.getElementById('analyticsModal').classList.remove('active');
+        }
+
+        document.getElementById('analyticsLink').addEventListener('click', loadAnalytics);
+
+        checkAuth();
+    </script>
+</body>
+</html>
